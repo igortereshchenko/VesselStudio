@@ -1,0 +1,12 @@
+﻿to run  :
+
+	
+1) M = SegmentImage(’ImageName.png’,40,true,1.2)	
+	
+2) UISegmentFractal
+
+
+
+ -> 
+check - Windows Visible
+Enter file path
