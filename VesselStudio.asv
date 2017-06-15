@@ -979,7 +979,7 @@ function cmb_current_dicom_file_Callback(hObject, eventdata, handles)
     % Take action based upon selection
     handles.VesselStudio_data.current_dicom_file=selected_dicom_file;
     
-    if ~strcmp(get(hObject,'Tag'),'menu_file_import_slices_dataset')&&~strcmp(get(hObject,'Tag'),'menu_file_open_slices_dataset')&&~strcmp(get(hObject,'Tag'),'menu_file_open_dicom_files')
+    if ~strcmp(get(hObject,'Tag'),'menu_file_import_slices_dataset')&&~strcmp(get(hObject,'Tag'),'menu_file_open_slices_dataset')&&~strcmp(get(hObject,'Tag'),'menu_file_open_slices_dataset')
         handles.VesselStudio_data.XLim=handles.plot_main.XLim;
         handles.VesselStudio_data.YLim=handles.plot_main.YLim;    
     end

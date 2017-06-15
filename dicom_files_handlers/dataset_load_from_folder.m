@@ -2,7 +2,7 @@ function slices_dataset = dataset_load_from_folder(order_type )
 
 % default ordering  - descending
 if (nargin < 1) || isempty(order_type)
-  order_type = 'descend';
+  order_type = 'ascend';
 end
 
 %-------------------------------------------------------------------------------------
