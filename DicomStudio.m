@@ -23,7 +23,7 @@ function varargout = DicomStudio(varargin)
 
 % Edit the above text to modify the response to help DicomStudio
 
-% Last Modified by GUIDE v2.5 16-Aug-2016 12:45:34
+% Last Modified by GUIDE v2.5 16-Jun-2017 20:12:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -177,6 +177,7 @@ count_of_files=length(file_list)-2; % skip . and .. folder
 handles.dicom_files_list=[];
 index=0;
 
+tags=[];cmb_string =[];
 
 for i=1:count_of_files 
     
@@ -193,10 +194,37 @@ for i=1:count_of_files
     index=index+1;
     image = dicomread(fullname);
     dicom_files_list(index)=struct('main_tag',[],'skipped',false,'node',[],'image',image,'dicom_info',metadata,'fullname',fullname,'filename',file_list(i+2).name);
-    
-    
+        
+    fields=char(fieldnames(metadata));
+    cmb_string=union(cmb_string,cellstr(fields));
     
 end
+
+%filtering fileds
+cmb_string_filtered=[]
+for i=1:size(cmb_string,1)
+    fields = char(cmb_string(i));
+    
+    for k=1:size(fields,1)
+        [group, element]=dicomlookup(strtrim(fields(k,:)));    
+        if ~isempty(group)&&~isempty(element)
+            tags=char(tags,strtrim(fields(k,:)));
+        end;
+    end;
+
+   cmb_string_filtered=union(cmb_string_filtered,cellstr(tags(2:size(tags,1),:)));
+end;
+
+    
+cmb_string=char(sort(cmb_string_filtered));
+        
+set(handles.cmb_tags_group_by,'String',cmb_string);
+value=find(strcmp(cellstr(cmb_string),strtrim(char(handles.main_tag))));
+if isempty(value)
+    value=1;
+end;
+set(handles.cmb_tags_group_by,'Value',value);
+
 set(sb.ProgressBar,'Visible',0);
 statusbar(gcf,'Ready')
 if index
@@ -204,32 +232,17 @@ if index
 end;
 
 
-%update cmb_tags_group_by
-tags=[];
+
 set(handles.btn_dicom_file_previous,'Enable','off')
 set(handles.btn_dicom_file_next,'Enable','off')
 
 if index
-    metadata=dicom_files_list(1).dicom_info;
-    fields=char(fieldnames(metadata));
-    for k=1:size(fields,1)
-        [group, element]=dicomlookup(strtrim(fields(k,:)));    
-        if ~isempty(group)&&~isempty(element)
-            tags=char(tags,strtrim(fields(k,:)));
-        end;
-    end;
-    cmb_string=tags(2:size(tags,1),:);
-    cmb_string=char(sort(cellstr(cmb_string)));
-    set(handles.cmb_tags_group_by,'String',cmb_string);
-    value=find(strcmp(cellstr(cmb_string),strtrim(char(handles.main_tag))));
-    if isempty(value)
-        value=1;
-    end;
-    set(handles.cmb_tags_group_by,'Value',value);    
+    
     set(handles.btn_dicom_file_previous,'Enable','on')
     set(handles.btn_dicom_file_next,'Enable','on')
-    handles.main_tag=cmb_string(value,:);
+    %handles.main_tag=get(handles.cmb_tags_group_by,'Value');
 end;
+
 handles.main_tag_list_filtered=[];
 handles.image_height=[];
 handles.image_width=[]; 
@@ -248,8 +261,8 @@ set(handles.list_tags_filter,'String',handles.main_tag_list);
 set(handles.list_tags_filter,'Value',1);
 guidata(hObject, handles);
 
-
-
+   
+    
 
 function create_tag_list(handles)
 
@@ -261,21 +274,32 @@ main_tag_list=[];
 
 
 %get all tags for grouping
+is_empty_tag=false;
+
 for dicom_file_index=1:size(handles.dicom_files_list,2)
 
     metadata=handles.dicom_files_list(dicom_file_index).dicom_info;
     
-    tag_value=getfield(metadata, handles.main_tag);
-    
-    if ischar(tag_value)
-        tag_value_str=tag_value;
-    elseif isnumeric(tag_value)
-        tag_value_str=num2str(tag_value);
-    end
-    
-    main_tag_list=union(main_tag_list,cellstr(tag_value_str));
-    
+    if isFieldExists(metadata, handles.main_tag)
+        
+        tag_value=getfield(metadata, handles.main_tag);
+
+        if ischar(tag_value)
+            tag_value_str=tag_value;
+        elseif isnumeric(tag_value)
+            tag_value_str=num2str(tag_value);
+        end
+        
+        
+        main_tag_list=union(main_tag_list,cellstr(tag_value_str));
+        
+    else
+        tag_value_str='tag_not_exists';
+        is_empty_tag=true;
+    end;
+
     handles.dicom_files_list(dicom_file_index).main_tag=tag_value_str;
+
 end;
 
 if isnumeric(tag_value)
@@ -284,6 +308,10 @@ if isnumeric(tag_value)
     main_tag_list=main_tag_list(indexes);
 else
     main_tag_list=sort(main_tag_list);   
+end;
+
+if is_empty_tag
+    main_tag_list=union(main_tag_list,cellstr('tag_not_exists'));
 end;
 
 handles.main_tag_list=main_tag_list;
@@ -316,7 +344,7 @@ main_tag_list_filtered=handles.main_tag_list_filtered;
 
 handles.dicom_series_tree_main_node = TreeNode('Name',strcat(handles.main_tag,'. Total files:',num2str(size(handles.dicom_files_list,2))),'Parent',handles.dicom_series_tree.Root);
 for j=1:size(main_tag_list_filtered,2)
-    dicom_series_tree_nodes_group(j)=TreeNode('Name',strcat(handles.main_tag,':',char(main_tag_list_filtered(j))),'Parent',handles.dicom_series_tree_main_node,'UserData',[]);
+    dicom_series_tree_nodes_group(j)=TreeNode('Name',strcat(handles.main_tag,'=',char(main_tag_list_filtered(j))),'Parent',handles.dicom_series_tree_main_node,'UserData',[]);
     setIcon(dicom_series_tree_nodes_group(j),handles.icon_pages);
 end;
 count_of_group=size(handles.dicom_files_list,2);
@@ -366,7 +394,9 @@ if handles.plot_dicom_image.XLim(2)~=1
     handles.XLim=handles.plot_dicom_image.XLim;
     handles.YLim=handles.plot_dicom_image.YLim;    
 end;
+
 current_dicom_file=handles.dicom_files_list(handles.current_dicom_file_index);
+
 metadata=current_dicom_file.dicom_info;
 image=current_dicom_file.image;
 
@@ -1044,3 +1074,56 @@ else
     set(handles.txt_tags_search,'Enable','off');        
     set(handles.txt_tags_search_group_element,'Enable','off');            
 end;
+
+
+% --------------------------------------------------------------------
+function menu_save_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to menu_save (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%dicom_files_list(index)=struct('main_tag',[],'skipped',false,'node',[],'image',image,'dicom_info',metadata,'fullname',fullname,'filename',file_list(i+2).name);
+
+hObject=handles.frm_DicomStudio;
+import uiextras.jTree.*
+
+if isempty(handles.dicom_files_list)
+    questdlg('No one dicom file found.', ...
+        'Dicom Studio', ...
+        'Ok','Ok'); 
+    return
+end;
+
+handles = guidata(handles.frm_DicomStudio);
+
+result_pathfiles = uigetdir;% Result folder, must not equal to the "target_pathfiles"
+
+
+
+for i=1:size(handles.dicom_series_tree_main_node.Children,2)
+
+    sb=statusbar(gcf,'Dicom files saving %d of %d (%.1f%%)...',i,size(handles.dicom_series_tree_main_node.Children,2),100*i/size(handles.dicom_series_tree_main_node.Children,2)); 
+    set(sb.ProgressBar,'Visible',1,'Value',100*i/size(handles.dicom_series_tree_main_node.Children,2));
+    
+    current_node=handles.dicom_series_tree_main_node.Children(i);
+    
+    data_folder_name=current_node.Name;
+
+    node_result_pathfiles=strcat(result_pathfiles,'\',data_folder_name);
+    mkdir(node_result_pathfiles);
+    
+    for j=1:size(current_node.Children,2)
+    
+        dicom_struct=handles.dicom_files_list(current_node.Children(j).UserData);
+        
+        if ~dicom_struct.skipped
+            dicomwrite(dicom_struct.image, strcat(node_result_pathfiles,'\',dicom_struct.filename),dicom_struct.dicom_info,'CreateMode','Copy'); 
+        end;
+        
+    end
+    
+end
+
+
+set(sb.ProgressBar,'Visible',0);
+statusbar(gcf,'Ready');
